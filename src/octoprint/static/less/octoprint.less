@@ -282,7 +282,8 @@ table {
     }
 
     // timelapse files
-    &.timelapse_files_name {
+    &.timelapse_files_name,
+    &.timelapse_unrendered_name {
       text-overflow: ellipsis;
       text-align: left;
     }
@@ -292,7 +293,18 @@ table {
       width: 55px;
     }
 
-    &.timelapse_files_action {
+    &.timelapse_unrendered_size {
+      text-align: right;
+      width: 55px;
+    }
+
+    &.timelapse_unrendered_count {
+      text-align: right;
+      width: 45px;
+    }
+
+    &.timelapse_files_action,
+    &.timelapse_unrendered_action {
       width: 45px;
       .actioncol;
     }
@@ -443,28 +455,6 @@ ul.dropdown-menu li a {
   outline: none;
 
   //min-height: 440px;
-
-  .flipH {
-    -webkit-transform: scaleX(-1);
-    -moz-transform: scaleX(-1);
-    -ms-transform: scaleX(-1);
-  }
-
-  .flipV {
-    -webkit-transform: scaleY(-1);
-    -moz-transform: scaleY(-1);
-    -ms-transform: scaleY(-1);
-  }
-
-  .flipH.flipV {
-    -webkit-transform: scaleX(-1) scaleY(-1);
-    -moz-transform: scaleX(-1) scaleY(-1);
-    -ms-transform: scaleX(-1) scaleY(-1);
-  }
-
-  .rotate90 {
-    transform: rotate(-90deg);
-  }
 
   .keycontrol_overlay {
     position: absolute;
@@ -679,7 +669,7 @@ ul.dropdown-menu li a {
 
 #term {
   .terminal {
-    #terminal-output {
+    #terminal-output, #terminal-output-lowfi {
       min-height: 340px;
       margin-bottom: 5px;
     }
@@ -692,14 +682,17 @@ ul.dropdown-menu li a {
   }
 }
 
-/** Settings dialog */
-#settings_dialog {
-  .modal-body {
-    #settings_dialog_menu {
-      margin-left: 0;
-    }
+#settings_dialog_menu,
+#wizard_dialog_menu {
+  margin-left: 0;
+}
+
+#wizard_firstrun_acl {
+  .acl_decision {
+    margin-top: 1em;
   }
 }
+
 
 
 #settings_appearance_managelanguagesdialog_emptylist {
@@ -762,6 +755,10 @@ ul.dropdown-menu li a {
 
 .text-right {
   text-align: right;
+}
+
+.text-center {
+  text-align: center;
 }
 
 .overflow_visible {
@@ -915,6 +912,33 @@ textarea.block {
   float: none;
   margin-left: auto;
   margin-right: auto;
+}
+
+.flipH {
+  -webkit-transform: scaleX(-1);
+  -moz-transform: scaleX(-1);
+  -ms-transform: scaleX(-1);
+}
+
+.flipV {
+  -webkit-transform: scaleY(-1);
+  -moz-transform: scaleY(-1);
+  -ms-transform: scaleY(-1);
+}
+
+.flipH.flipV {
+  -webkit-transform: scaleX(-1) scaleY(-1);
+  -moz-transform: scaleX(-1) scaleY(-1);
+  -ms-transform: scaleX(-1) scaleY(-1);
+}
+
+.rotate90 {
+  -webkit-transform: rotate(-90deg);
+  transform: rotate(-90deg);
+}
+
+.ui-pnotify a {
+  text-decoration: underline;
 }
 
 /** Styles for Bootstrap Slider */

@@ -611,6 +611,32 @@ Use the following settings to configure the serial connection to the printer:
      additionalPorts:
      - /dev/myPrinterSymlink
 
+     # Use this to define additional baud rates to offer for connecting to serial ports. Must be a
+     # valid integer. Defaults to not set
+     additionalBaudrates:
+     - 123456
+
+     # Commands which are known to take a long time to be acknowledged by the firmware. E.g.
+     # homing, dwelling, auto leveling etc. Defaults to the below commands.
+     longRunningCommands:
+     - G4
+     - G28
+     - G29
+     - G30
+     - G32
+     - M400
+     - M226
+
+     # Commands which need to always be send with a checksum. Defaults to only M110
+     checksumRequiringCommands:
+     - M110
+
+     # Command to send in order to initiate a handshake with the printer.
+     # Defaults to "M110 N0" which simply resets the line numbers in the firmware and which
+     # should be acknowledged with a simple "ok".
+     helloCommand:
+     - M110 N0
+
 .. _sec-configuration-config_yaml-server:
 
 Server
@@ -640,7 +666,7 @@ Use the following settings to configure the server:
      # that AJAX requests and download URLs work.
      reverseProxy:
 
-       # The request header from which to determine the url prefix under which OctoPrint
+       # The request header from which to determine the URL prefix under which OctoPrint
        # is served by the reverse proxy
        prefixHeader: X-Script-Name
 
@@ -652,7 +678,7 @@ Use the following settings to configure the server:
        # is served by the reverse proxy
        hostHeader: X-Forwarded-Host
 
-       # Use this option to define an optional url prefix (with a leading /, so absolute to your
+       # Use this option to define an optional URL prefix (with a leading /, so absolute to your
        # server's root) under which to run OctoPrint. This should only be needed if you want to run
        # OctoPrint behind a reverse proxy under a different root endpoint than `/` and can't configure
        # said reverse proxy to send a prefix HTTP header (X-Script-Name by default, see above) with

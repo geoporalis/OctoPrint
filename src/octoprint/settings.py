@@ -46,7 +46,7 @@ def settings(init=False, basedir=None, configfile=None):
 	        (False, default). If this is set to True and the plugin manager has already been initialized, a :class:`ValueError`
 	        will be raised. The same will happen if the plugin manager has not yet been initialized and this is set to
 	        False.
-	    basedir (str): Path of the base directoy for all of OctoPrint's settings, log files, uploads etc. If not set
+	    basedir (str): Path of the base directory for all of OctoPrint's settings, log files, uploads etc. If not set
 	        the default will be used: ``~/.octoprint`` on Linux, ``%APPDATA%/OctoPrint`` on Windows and
 	        ``~/Library/Application Support/OctoPrint`` on MacOS.
 	    configfile (str): Path of the configuration file (``config.yaml``) to work on. If not set the default will
@@ -82,15 +82,22 @@ default_settings = {
 			"connection": 10,
 			"communication": 30,
 			"temperature": 5,
+			"temperatureTargetSet": 2,
 			"sdStatus": 1
 		},
 		"additionalPorts": [],
-		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32"]
+		"additionalBaudrates": [],
+		"longRunningCommands": ["G4", "G28", "G29", "G30", "G32", "M400", "M226"],
+		"checksumRequiringCommands": ["M110"],
+		"helloCommand": "M110 N0",
+		"disconnectOnErrors": True,
+		"ignoreErrorsFromFirmware": False
 	},
 	"server": {
 		"host": "0.0.0.0",
 		"port": 5000,
 		"firstRun": True,
+		"seenWizards": {},
 		"secretKey": None,
 		"reverseProxy": {
 			"prefixHeader": "X-Script-Name",
@@ -114,6 +121,10 @@ default_settings = {
 		"diskspace": {
 			"warning": 500 * 1024 * 1024, # 500 MB
 			"critical": 200 * 1024 * 1024, # 200 MB
+		},
+		"preemptiveCache": {
+			"exceptions": [],
+			"until": 7
 		}
 	},
 	"webcam": {
@@ -131,7 +142,8 @@ default_settings = {
 			"options": {},
 			"postRoll": 0,
 			"fps": 25
-		}
+		},
+		"cleanTmpAfterDays": 7
 	},
 	"gcodeViewer": {
 		"enabled": True,
@@ -145,6 +157,7 @@ default_settings = {
 		"temperatureGraph": True,
 		"waitForStartOnConnect": False,
 		"alwaysSendChecksum": False,
+		"neverSendChecksum": False,
 		"sendChecksumWithUnknownCommands": False,
 		"unknownCommandsNeedAck": False,
 		"sdSupport": True,
@@ -156,7 +169,8 @@ default_settings = {
 		"keyboardControl": True,
 		"pollWatched": False,
 		"ignoreIdenticalResends": False,
-		"identicalResendsCountdown": 7
+		"identicalResendsCountdown": 7,
+		"supportFAsCommand": False
 	},
 	"folder": {
 		"uploads": None,
@@ -204,6 +218,8 @@ default_settings = {
 					"section_octoprint", "server", "folders", "appearance", "logs", "plugin_pluginmanager", "plugin_softwareupdate"
 				],
 				"usersettings": ["access", "interface"],
+				"wizard": ["access"],
+				"about": ["about", "license", "thirdparty", "plugin_pluginmanager", "authors", "changelog"],
 				"generic": []
 			},
 			"disabled": {
@@ -263,7 +279,8 @@ default_settings = {
 	"devel": {
 		"stylesheet": "css",
 		"cache": {
-			"enabled": True
+			"enabled": True,
+			"preemptive": True
 		},
 		"webassets": {
 			"minify": False,
@@ -296,7 +313,9 @@ default_settings = {
 			"commandBuffer": 4,
 			"sendWait": True,
 			"waitInterval": 1.0,
-			"supportM112": True
+			"supportM112": True,
+			"echoOnM117": True,
+			"supportF": False
 		}
 	}
 }
@@ -562,6 +581,20 @@ class Settings(object):
 	def effective_yaml(self):
 		import yaml
 		return yaml.safe_dump(self.effective)
+
+	@property
+	def effective_hash(self):
+		import hashlib
+		hash = hashlib.md5()
+		hash.update(repr(self.effective))
+		return hash.hexdigest()
+
+	@property
+	def config_hash(self):
+		import hashlib
+		hash = hashlib.md5()
+		hash.update(repr(self._config))
+		return hash.hexdigest()
 
 	#~~ load and save
 

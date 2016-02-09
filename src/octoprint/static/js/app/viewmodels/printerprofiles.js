@@ -101,7 +101,7 @@ $(function() {
             {key: "black", name: gettext("black")}
         ]);
 
-        self.availableOrigins = ko.computed(function() {
+        self.availableOrigins = ko.pureComputed(function() {
             var formFactor = self.editorVolumeFormFactor();
 
             var possibleOrigins = {
@@ -123,7 +123,7 @@ $(function() {
             return result;
         });
 
-        self.koEditorExtruderOffsets = ko.computed(function() {
+        self.koEditorExtruderOffsets = ko.pureComputed(function() {
             var extruderOffsets = self.editorExtruderOffsets();
             var numExtruders = self.editorExtruders();
             if (!numExtruders) {
@@ -144,11 +144,11 @@ $(function() {
             return extruderOffsets.slice(0, numExtruders - 1);
         });
 
-        self.editorNameInvalid = ko.computed(function() {
+        self.editorNameInvalid = ko.pureComputed(function() {
             return !self.editorName();
         });
 
-        self.editorIdentifierInvalid = ko.computed(function() {
+        self.editorIdentifierInvalid = ko.pureComputed(function() {
             var identifier = self.editorIdentifier();
             var placeholder = self.editorIdentifierPlaceholder();
             var data = identifier;
@@ -162,7 +162,7 @@ $(function() {
             return !data || !validCharacters || (self.editorNew() && existingProfile != undefined);
         });
 
-        self.editorIdentifierInvalidText = ko.computed(function() {
+        self.editorIdentifierInvalidText = ko.pureComputed(function() {
             if (!self.editorIdentifierInvalid()) {
                 return "";
             }
@@ -176,7 +176,7 @@ $(function() {
             }
         });
 
-        self.enableEditorSubmitButton = ko.computed(function() {
+        self.enableEditorSubmitButton = ko.pureComputed(function() {
             return !self.editorNameInvalid() && !self.editorIdentifierInvalid() && !self.requestInProgress();
         });
 
@@ -194,12 +194,8 @@ $(function() {
         };
 
         self.requestData = function() {
-            $.ajax({
-                url: API_BASEURL + "printerprofiles",
-                type: "GET",
-                dataType: "json",
-                success: self.fromResponse
-            })
+            OctoPrint.printerprofiles.get()
+                .done(self.fromResponse);
         };
 
         self.fromResponse = function(data) {
@@ -228,43 +224,35 @@ $(function() {
         self.addProfile = function(callback) {
             var profile = self._editorData();
             self.requestInProgress(true);
-            $.ajax({
-                url: API_BASEURL + "printerprofiles",
-                type: "POST",
-                dataType: "json",
-                contentType: "application/json; charset=UTF-8",
-                data: JSON.stringify({profile: profile}),
-                success: function() {
-                    self.requestInProgress(false);
+            OctoPrint.printerprofiles.add(profile)
+                .done(function() {
                     if (callback !== undefined) {
                         callback();
                     }
                     self.requestData();
-                },
-                error: function() {
-                    self.requestInProgress(false);
+                })
+                .fail(function() {
                     var text = gettext("There was unexpected error while saving the printer profile, please consult the logs.");
                     new PNotify({title: gettext("Saving failed"), text: text, type: "error", hide: false});
-                }
-            });
+                })
+                .always(function() {
+                    self.requestInProgress(false);
+                });
         };
 
         self.removeProfile = function(data) {
             self.requestInProgress(true);
-            $.ajax({
-                url: data.resource,
-                type: "DELETE",
-                dataType: "json",
-                success: function() {
-                    self.requestInProgress(false);
+            OctoPrint.printerprofiles.delete(data.id, {url: data.resource})
+                .done(function() {
                     self.requestData();
-                },
-                error: function() {
-                    self.requestInProgress(false);
+                })
+                .fail(function() {
                     var text = gettext("There was unexpected error while removing the printer profile, please consult the logs.");
                     new PNotify({title: gettext("Saving failed"), text: text, type: "error", hide: false});
-                }
-            })
+                })
+                .always(function() {
+                    self.requestInProgress(false);
+                });
         };
 
         self.updateProfile = function(profile, callback) {
@@ -273,26 +261,20 @@ $(function() {
             }
 
             self.requestInProgress(true);
-
-            $.ajax({
-                url: API_BASEURL + "printerprofiles/" + profile.id,
-                type: "PATCH",
-                dataType: "json",
-                contentType: "application/json; charset=UTF-8",
-                data: JSON.stringify({profile: profile}),
-                success: function() {
-                    self.requestInProgress(false);
+            OctoPrint.printerprofiles.update(profile.id, profile)
+                .done(function() {
                     if (callback !== undefined) {
                         callback();
                     }
                     self.requestData();
-                },
-                error: function() {
-                    self.requestInProgress(false);
+                })
+                .fail(function() {
                     var text = gettext("There was unexpected error while updating the printer profile, please consult the logs.");
                     new PNotify({title: gettext("Saving failed"), text: text, type: "error", hide: false});
-                }
-            });
+                })
+                .always(function() {
+                    self.requestInProgress(false);
+                });
         };
 
         self.showEditProfileDialog = function(data) {
