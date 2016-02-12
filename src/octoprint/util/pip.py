@@ -214,6 +214,7 @@ class PipCaller(CommandlineCaller):
 	def _get_pip_command(self):
 		pip_command = self.configured
 
+<<<<<<< HEAD
 		if pip_command is not None and pip_command.startswith("sudo "):
 			pip_command = pip_command[len("sudo "):]
 			pip_sudo = True
@@ -222,6 +223,23 @@ class PipCaller(CommandlineCaller):
 
 		if pip_command is None:
 			pip_command = self.autodetect_pip()
+=======
+		all_stdout = []
+		all_stderr = []
+		try:
+			while p.returncode is None:
+				lines = p.stderr.readlines(timeout=0.5)
+				if lines:
+					lines = self._convert_lines(lines)
+					self._log_stderr(*lines)
+					all_stderr += lines
+
+				lines = p.stdout.readlines(timeout=0.5)
+				if lines:
+					lines = self._convert_lines(lines)
+					self._log_stdout(*lines)
+					all_stdout += lines
+>>>>>>> maintenance
 
 		return pip_command, pip_sudo
 
@@ -229,6 +247,7 @@ class PipCaller(CommandlineCaller):
 	def autodetect_pip(cls):
 		return [sys.executable, "-m", "pip"]
 
+<<<<<<< HEAD
 	@classmethod
 	def to_sarge_command(cls, pip_command, *args):
 		if isinstance(pip_command, list):
@@ -242,6 +261,19 @@ class PipCaller(CommandlineCaller):
 		# generated? PyCharm bug. Disable "Attach to subprocess automatically when debugging"
 		# in IDE Settings or patch pydevd.py
 		# -> https://youtrack.jetbrains.com/issue/PY-18365#comment=27-1290453
+=======
+		lines = p.stderr.readlines()
+		if lines:
+			lines = map(self._convert_line, lines)
+			self._log_stderr(*lines)
+			all_stderr += lines
+
+		lines = p.stdout.readlines()
+		if lines:
+			lines = map(self._convert_line, lines)
+			self._log_stdout(*lines)
+			all_stdout += lines
+>>>>>>> maintenance
 
 		pip_command_str = pip_command
 		if isinstance(pip_command_str, list):
@@ -374,6 +406,7 @@ class PipCaller(CommandlineCaller):
 		Parameters:
 		    text (str or unicode): The text to process
 
+<<<<<<< HEAD
 		Returns:
 		    (unicode) The processed text as a unicode, stripped of ANSI and VT100 cursor show/hide codes
 
@@ -409,3 +442,12 @@ class LocalPipCaller(PipCaller):
 		       not writable and can_use_user_flag, \
 		       virtual_env, \
 		       install_dir
+=======
+	@staticmethod
+	def _convert_lines(lines):
+		return map(PipCaller._convert_line, lines)
+
+	@staticmethod
+	def _convert_line(line):
+		return to_unicode(_clean_ansi(line), errors="replace")
+>>>>>>> maintenance
