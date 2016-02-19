@@ -231,6 +231,7 @@ class MachineCom(object):
 		self._pauseWaitStartTime = None
 		self._pauseWaitTimeLost = 0.0
 		self._currentTool = 0
+		self._formerTool = None
 
 		self._long_running_command = False
 		self._heating = False
@@ -327,7 +328,8 @@ class MachineCom(object):
 				self._callback.on_comm_sd_files([])
 
 			if self._currentFile is not None:
-				self._recordFilePosition()
+				if self.isBusy():
+					self._recordFilePosition()
 				self._currentFile.close()
 
 		oldState = self.getStateString()
@@ -720,6 +722,10 @@ class MachineCom(object):
 		if not self.isOperational() or self.isStreaming():
 			return
 
+		if not self.isBusy() or self._currentFile is None:
+			# we aren't even printing, nothing to cancel...
+			return
+
 		self._changeState(self.STATE_OPERATIONAL)
 
 		if self.isSdFileSelected():
@@ -985,13 +991,20 @@ class MachineCom(object):
 					else:
 						continue
 
+				def convert_line(line):
+					if line is None:
+						return None, None
+					stripped_line = line.strip()
+					return stripped_line, stripped_line.lower()
+
 				##~~ Error handling
 				line = self._handleErrors(line)
+				line, lower_line = convert_line(line)
 
 				##~~ SD file list
 				# if we are currently receiving an sd file list, each line is just a filename, so just read it and abort processing
 				if self._sdFileList and not "End file list" in line:
-					preprocessed_line = line.strip().lower()
+					preprocessed_line = lower_line
 					fileinfo = preprocessed_line.rsplit(None, 1)
 					if len(fileinfo) > 1:
 						# we might have extended file information here, so let's split filename and size and try to make them a bit nicer
@@ -1060,10 +1073,14 @@ class MachineCom(object):
 							pass
 
 				#If we are waiting for an M109 or M190 then measure the time we lost during heatup, so we can remove that time from our printing time estimate.
-				if 'ok' in line and self._heatupWaitStartTime:
-					self._heatupWaitTimeLost = self._heatupWaitTimeLost + (time.time() - self._heatupWaitStartTime)
-					self._heatupWaitStartTime = None
-					self._heating = False
+				if line.startswith("ok"):
+					if self._formerTool is not None:
+						self._currentTool = self._formerTool
+						self._formerTool = None
+					if self._heatupWaitStartTime:
+						self._heatupWaitTimeLost = self._heatupWaitTimeLost + (time.time() - self._heatupWaitStartTime)
+						self._heatupWaitStartTime = None
+						self._heating = False
 
 				##~~ SD Card handling
 				elif 'SD init fail' in line or 'volume.init failed' in line or 'openRoot failed' in line:
@@ -1112,7 +1129,7 @@ class MachineCom(object):
 				elif 'Writing to file' in line and self.isStreaming():
 					self._changeState(self.STATE_PRINTING)
 					self._clear_to_send.set()
-					line = "ok"
+					line, lower_line = convert_line("ok")
 				elif 'Done printing file' in line and self.isSdPrinting():
 					# printer is reporting file finished printing
 					self._sdFilePos = 0
@@ -1137,8 +1154,9 @@ class MachineCom(object):
 					self._clear_to_send.set()
 
 				##~~ Message handling
-				elif line.strip() != '' \
-						and line.strip() != 'ok' and not line.startswith("wait") \
+				elif line != '' \
+						and not line.startswith("ok") \
+						and not line.startswith("wait") \
 						and not line.startswith('Resend:') \
 						and line != 'echo:Unknown command:""\n' \
 						and self.isOperational():
@@ -1197,6 +1215,7 @@ class MachineCom(object):
 				elif self._state == self.STATE_CONNECTING:
 					if "start" in line and not startSeen:
 						startSeen = True
+<<<<<<< HEAD
 						self.sayHello()
 					elif "ok" in line:
 						self._onConnected()
@@ -1205,6 +1224,26 @@ class MachineCom(object):
 
 				### Operational & Printing
 				if self._state in (self.STATE_OPERATIONAL, self.STATE_PAUSED, self.STATE_PRINTING):
+=======
+						self._sendCommand("M110")
+						self._clear_to_send.set()
+					elif line.startswith("ok"):
+						self._onConnected()
+					elif time.time() > self._timeout:
+						self.close()
+
+				### Operational
+				elif self._state == self.STATE_OPERATIONAL or self._state == self.STATE_PAUSED:
+					if line.startswith("ok"):
+						self._handle_ok()
+
+					# resend -> start resend procedure from requested line
+					elif lower_line.startswith("resend") or lower_line.startswith("rs"):
+						self._handleResendRequest(line)
+
+				### Printing
+				elif self._state == self.STATE_PRINTING:
+>>>>>>> maintenance
 					if line == "" and time.time() > self._timeout:
 						if not self._long_running_command:
 							self._log("Communication timeout, forcing a line")
@@ -1213,12 +1252,16 @@ class MachineCom(object):
 						else:
 							self._logger.debug("Ran into a communication timeout, but a command known to be a long runner is currently active")
 
+<<<<<<< HEAD
 					elif "ok" in line or (self._state == self.STATE_PRINTING and supportWait and "wait" in line):
+=======
+					if line.startswith("ok") or (supportWait and line.startswith("wait")):
+>>>>>>> maintenance
 						# a wait while printing means our printer's buffer ran out, probably due to some ok getting
 						# swallowed, so we treat it the same as an ok here to take up communication again
 						self._handle_ok()
 
-					elif line.lower().startswith("resend") or line.lower().startswith("rs"):
+					elif lower_line.startswith("resend") or lower_line.startswith("rs"):
 						self._handleResendRequest(line)
 			except:
 				self._logger.exception("Something crashed inside the serial connection loop, please report this in OctoPrint's bug tracker:")
@@ -1911,11 +1954,17 @@ class MachineCom(object):
 			return None, # Don't send bed commands if we don't have a heated bed
 	_gcode_M190_queuing = _gcode_M140_queuing
 
-	def _gcode_M104_sent(self, cmd, cmd_type=None):
+	def _gcode_M104_sent(self, cmd, cmd_type=None, wait=False):
 		toolNum = self._currentTool
 		toolMatch = regexes_parameters["intT"].search(cmd)
+
 		if toolMatch:
 			toolNum = int(toolMatch.group("value"))
+
+			if wait:
+				self._formerTool = self._currentTool
+				self._currentTool = toolNum
+
 		match = regexes_parameters["floatS"].search(cmd)
 		if match:
 			try:
@@ -1928,7 +1977,7 @@ class MachineCom(object):
 			except ValueError:
 				pass
 
-	def _gcode_M140_sent(self, cmd, cmd_type=None):
+	def _gcode_M140_sent(self, cmd, cmd_type=None, wait=False):
 		match = regexes_parameters["floatS"].search(cmd)
 		if match:
 			try:
@@ -1945,13 +1994,13 @@ class MachineCom(object):
 		self._heatupWaitStartTime = time.time()
 		self._long_running_command = True
 		self._heating = True
-		self._gcode_M104_sent(cmd, cmd_type)
+		self._gcode_M104_sent(cmd, cmd_type, wait=True)
 
 	def _gcode_M190_sent(self, cmd, cmd_type=None):
 		self._heatupWaitStartTime = time.time()
 		self._long_running_command = True
 		self._heating = True
-		self._gcode_M140_sent(cmd, cmd_type)
+		self._gcode_M140_sent(cmd, cmd_type, wait=True)
 
 	def _gcode_M110_sending(self, cmd, cmd_type=None):
 		newLineNumber = None

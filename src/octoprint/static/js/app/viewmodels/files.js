@@ -564,11 +564,17 @@ $(function() {
             var drop = (dropzone == "local") ? self.localTarget : self.sdTarget;
             var url = API_BASEURL + "files/" + dropzone;
 
+<<<<<<< HEAD
             if (button === undefined)
                 return;
 
             button.fileupload({
                 url: url,
+=======
+        self._enableSdDropzone = function(enable) {
+            var options = {
+                url: API_BASEURL + "files/sdcard",
+>>>>>>> maintenance
                 dataType: "json",
                 dropZone: enable ? drop : null,
                 drop: function(e, data) {
