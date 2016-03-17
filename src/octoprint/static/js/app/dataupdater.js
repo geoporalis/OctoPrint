@@ -153,10 +153,82 @@ function DataUpdater(allViewModels) {
         var gcodeUploadProgress = $("#gcode_upload_progress");
         var gcodeUploadProgressBar = $(".bar", gcodeUploadProgress);
 
+<<<<<<< HEAD
         var type = event.data["type"];
         var payload = event.data["payload"];
         var html = "";
         var format = {};
+=======
+                        if (self._timelapse_popup !== undefined) {
+                            self._timelapse_popup.remove();
+                        }
+                        self._timelapse_popup = new PNotify({
+                            title: title,
+                            text: text,
+                            hide: false,
+                            callbacks: {
+                                before_close: function(notice) {
+                                    if (self._timelapse_popup == notice) {
+                                        self._timelapse_popup = undefined;
+                                    }
+                                }
+                            }
+                        });
+                    } else if (type == "SlicingStarted") {
+                        gcodeUploadProgress.addClass("progress-striped").addClass("active");
+                        gcodeUploadProgressBar.css("width", "100%");
+                        if (payload.progressAvailable) {
+                            gcodeUploadProgressBar.text(_.sprintf(gettext("Slicing ... (%(percentage)d%%)"), {percentage: 0}));
+                        } else {
+                            gcodeUploadProgressBar.text(gettext("Slicing ..."));
+                        }
+                    } else if (type == "SlicingDone") {
+                        gcodeUploadProgress.removeClass("progress-striped").removeClass("active");
+                        gcodeUploadProgressBar.css("width", "0%");
+                        gcodeUploadProgressBar.text("");
+                        new PNotify({title: gettext("Slicing done"), text: _.sprintf(gettext("Sliced %(stl)s to %(gcode)s, took %(time).2f seconds"), payload), type: "success"});
+                    } else if (type == "SlicingCancelled") {
+                        gcodeUploadProgress.removeClass("progress-striped").removeClass("active");
+                        gcodeUploadProgressBar.css("width", "0%");
+                        gcodeUploadProgressBar.text("");
+                    } else if (type == "SlicingFailed") {
+                        gcodeUploadProgress.removeClass("progress-striped").removeClass("active");
+                        gcodeUploadProgressBar.css("width", "0%");
+                        gcodeUploadProgressBar.text("");
+
+                        html = _.sprintf(gettext("Could not slice %(stl)s to %(gcode)s: %(reason)s"), payload);
+                        new PNotify({title: gettext("Slicing failed"), text: html, type: "error", hide: false});
+                    } else if (type == "TransferStarted") {
+                        gcodeUploadProgress.addClass("progress-striped").addClass("active");
+                        gcodeUploadProgressBar.css("width", "100%");
+                        gcodeUploadProgressBar.text(gettext("Streaming ..."));
+                    } else if (type == "TransferDone") {
+                        gcodeUploadProgress.removeClass("progress-striped").removeClass("active");
+                        gcodeUploadProgressBar.css("width", "0%");
+                        gcodeUploadProgressBar.text("");
+                        new PNotify({
+                            title: gettext("Streaming done"),
+                            text: _.sprintf(gettext("Streamed %(local)s to %(remote)s on SD, took %(time).2f seconds"), payload),
+                            type: "success"
+                        });
+                    } else if (type == "PrintCancelled") {
+                        if (payload.firmwareError) {
+                            new PNotify({
+                                title: gettext("Unhandled communication error"),
+                                text: _.sprintf(gettext("There was an unhandled error while talking to the printer. Due to that the ongoing print job was cancelled. Error: %(firmwareError)s"), payload),
+                                type: "error",
+                                hide: false
+                            });
+                        }
+                    } else if (type == "Error") {
+                        new PNotify({
+                                title: gettext("Unhandled communication error"),
+                                text: _.sprintf(gettext("The was an unhandled error while talking to the printer. Due to that OctoPrint disconnected. Error: %(error)s"), payload),
+                                type: "error",
+                                hide: false
+                        });
+                    }
+>>>>>>> master
 
         log.debug("Got event " + type + " with payload: " + JSON.stringify(payload));
 

@@ -72,6 +72,7 @@ class VirtualPrinter(object):
 		self._selectedSdFileSize = None
 		self._selectedSdFilePos = None
 		self._writingToSd = False
+		self._writingToSdHandle = None
 		self._newSdFilePos = None
 		self._heatupThread = None
 
@@ -83,6 +84,8 @@ class VirtualPrinter(object):
 		self._waitInterval = settings().getFloat(["devel", "virtualPrinter", "waitInterval"])
 
 		self._echoOnM117 = settings().getBoolean(["devel", "virtualPrinter", "echoOnM117"])
+
+		self._brokenM29 = settings().getBoolean(["devel", "virtualPrinter", "brokenM29"])
 
 		self.currentLine = 0
 		self.lastN = 0
@@ -100,6 +103,16 @@ class VirtualPrinter(object):
 
 		self._killed = False
 
+<<<<<<< HEAD
+=======
+		self._triggerResendAt100 = True
+		self._triggerResendWithTimeoutAt105 = True
+		self._triggeredResendWithTimeoutAt105 = False
+
+		waitThread = threading.Thread(target=self._sendWaitAfterTimeout)
+		waitThread.start()
+
+>>>>>>> master
 		readThread = threading.Thread(target=self._processIncoming)
 		readThread.start()
 
@@ -154,6 +167,10 @@ class VirtualPrinter(object):
 				linenumber = int(re.search("N([0-9]+)", data).group(1))
 				self.lastN = linenumber
 				self.currentLine = linenumber
+
+				self._triggerResendAt100 = True
+				self._triggerResendWithTimeoutAt105 = True
+
 				self._sendOk()
 				continue
 			elif data.startswith("N"):
@@ -162,9 +179,17 @@ class VirtualPrinter(object):
 				if linenumber != expected:
 					self._triggerResend(actual=linenumber)
 					continue
-				elif self.currentLine == 101:
+				elif linenumber == 100 and self._triggerResendAt100:
 					# simulate a resend at line 100
+					self._triggerResendAt100 = False
 					self._triggerResend(expected=100)
+					continue
+				elif linenumber == 105 and self._triggerResendWithTimeoutAt105 and not self._writingToSd:
+					# simulate a resend with timeout at line 105
+					self._triggerResendWithTimeoutAt105 = False
+					self._triggerResend(expected=105)
+					self._dont_answer = True
+					self.lastN = linenumber
 					continue
 				else:
 					self.lastN = linenumber
@@ -173,9 +198,8 @@ class VirtualPrinter(object):
 			data += "\n"
 
 			# shortcut for writing to SD
-			if self._writingToSd and not self._selectedSdFile is None and not "M29" in data:
-				with open(self._selectedSdFile, "a") as f:
-					f.write(data)
+			if self._writingToSdHandle is not None and not "M29" in data:
+				self._writingToSdHandle.write(data)
 				self._sendOk()
 				continue
 
@@ -194,11 +218,128 @@ class VirtualPrinter(object):
 			if len(data.strip()) > 0 and self._okBeforeCommandOutput:
 				self._sendOk()
 
+<<<<<<< HEAD
 			# actual command handling
 			command_match = VirtualPrinter.command_regex.match(data)
 			if command_match is not None:
 				command = command_match.group(0)
 				letter = command_match.group(1)
+=======
+			#print "Send: %s" % (data.rstrip())
+			if 'M104' in data or 'M109' in data:
+				self._parseHotendCommand(data)
+
+			if 'M140' in data or 'M190' in data:
+				self._parseBedCommand(data)
+
+			if 'M105' in data:
+				self._processTemperatureQuery()
+				continue
+			elif 'M20' in data:
+				if self._sdCardReady:
+					self._listSd()
+			elif 'M21' in data:
+				self._sdCardReady = True
+				self.outgoing.put("SD card ok")
+			elif 'M22' in data:
+				self._sdCardReady = False
+			elif 'M23' in data:
+				if self._sdCardReady:
+					filename = data.split(None, 1)[1].strip()
+					self._selectSdFile(filename)
+			elif 'M24' in data:
+				if self._sdCardReady:
+					self._startSdPrint()
+			elif 'M25' in data:
+				if self._sdCardReady:
+					self._pauseSdPrint()
+			elif 'M26' in data:
+				if self._sdCardReady:
+					pos = int(re.search("S([0-9]+)", data).group(1))
+					self._setSdPos(pos)
+			elif 'M27' in data:
+				if self._sdCardReady:
+					self._reportSdStatus()
+			elif 'M28' in data:
+				if self._sdCardReady:
+					filename = data.split(None, 1)[1].strip()
+					self._writeSdFile(filename)
+			elif 'M29' in data:
+				if self._sdCardReady:
+					self._finishSdFile()
+				if self._brokenM29:
+					continue
+			elif 'M30' in data:
+				if self._sdCardReady:
+					filename = data.split(None, 1)[1].strip()
+					self._deleteSdFile(filename)
+			elif "M114" in data:
+				# send dummy position report
+				output = "C: X:10.00 Y:3.20 Z:5.20 E:1.24"
+				if not self._okBeforeCommandOutput:
+					output = "ok " + output
+				self.outgoing.put(output)
+				continue
+			elif "M117" in data:
+				# we'll just use this to echo a message, to allow playing around with pause triggers
+				if self._echoOnM117:
+					self.outgoing.put("echo:%s" % re.search("M117\s+(.*)", data).group(1))
+			elif "M999" in data:
+				# mirror Marlin behaviour
+				self.outgoing.put("Resend: 1")
+			elif data.startswith("T"):
+				self.currentExtruder = int(re.search("T(\d+)", data).group(1))
+				self.outgoing.put("Active Extruder: %d" % self.currentExtruder)
+			elif "G20" in data:
+				self._unitModifier = 1.0 / 2.54
+				if self._lastX is not None:
+					self._lastX *= 2.54
+				if self._lastY is not None:
+					self._lastY *= 2.54
+				if self._lastZ is not None:
+					self._lastZ *= 2.54
+				if self._lastE is not None:
+					self._lastE *= 2.54
+			elif "G21" in data:
+				self._unitModifier = 1.0
+				if self._lastX is not None:
+					self._lastX /= 2.54
+				if self._lastY is not None:
+					self._lastY /= 2.54
+				if self._lastZ is not None:
+					self._lastZ /= 2.54
+				if self._lastE is not None:
+					self._lastE /= 2.54
+			elif "G90" in data:
+				self._relative = False
+			elif "G91" in data:
+				self._relative = True
+			elif "G92" in data:
+				self._setPosition(data)
+
+			elif data.startswith("G28"):
+				self._performMove(data)
+
+			elif data.startswith("G0") or data.startswith("G1") or data.startswith("G2") or data.startswith("G3"):
+				# simulate reprap buffered commands via a Queue with maxsize which internally simulates the moves
+				self.buffered.put(data)
+
+			if len(self._sleepAfter) or len(self._sleepAfterNext):
+				command_match = VirtualPrinter.command_regex.match(data)
+				if command_match is not None:
+					command = command_match.group(0)
+
+					interval = None
+					if command in self._sleepAfter:
+						interval = self._sleepAfter[command]
+					elif command in self._sleepAfterNext:
+						interval = self._sleepAfterNext[command]
+						del self._sleepAfterNext[command]
+
+					if interval is not None:
+						self.outgoing.put("// sleeping for {interval} seconds".format(interval=interval))
+						time.sleep(interval)
+>>>>>>> master
 
 				try:
 					# if we have a method _gcode_G, _gcode_M or _gcode_T, execute that first
@@ -696,11 +837,28 @@ class VirtualPrinter(object):
 			else:
 				self._send("error writing to file")
 
+		handle = None
+		try:
+			handle = open(file, "w")
+		except:
+			self.outgoing.put("error writing to file")
+			if handle is not None:
+				try:
+					handle.close()
+				except:
+					pass
+		self._writingToSdHandle = handle
 		self._writingToSd = True
 		self._selectedSdFile = file
 		self._send("Writing to file: %s" % filename)
 
 	def _finishSdFile(self):
+		try:
+			self._writingToSdHandle.close()
+		except:
+			pass
+		finally:
+			self._writingToSdHandle = None
 		self._writingToSd = False
 		self._selectedSdFile = None
 		self.outgoing.put("Done saving file")
@@ -757,10 +915,12 @@ class VirtualPrinter(object):
 					# set target temps
 					if 'M104' in line or 'M109' in line:
 						self._parseHotendCommand(line)
-					if 'M140' in line or 'M190' in line:
+					elif 'M140' in line or 'M190' in line:
 						self._parseBedCommand(line)
+					elif line.startswith("G0") or line.startswith("G1") or line.startswith("G2") or line.startswith("G3"):
+						# simulate reprap buffered commands via a Queue with maxsize which internally simulates the moves
+						self.buffered.put(line)
 
-					time.sleep(settings().getFloat(["devel", "virtualPrinter", "throttle"]))
 		except AttributeError:
 			if self.outgoing is not None:
 				raise
@@ -872,8 +1032,11 @@ class VirtualPrinter(object):
 
 		try:
 			line = self.outgoing.get(timeout=self._read_timeout)
+<<<<<<< HEAD
 			time.sleep(settings().getFloat(["devel", "virtualPrinter", "throttle"]))
 			self._seriallog.info(">>> {}".format(line.strip()))
+=======
+>>>>>>> master
 			return line
 		except Queue.Empty:
 			return ""

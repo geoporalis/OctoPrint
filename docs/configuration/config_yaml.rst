@@ -611,11 +611,14 @@ Use the following settings to configure the serial connection to the printer:
      additionalPorts:
      - /dev/myPrinterSymlink
 
+<<<<<<< HEAD
      # Use this to define additional baud rates to offer for connecting to serial ports. Must be a
      # valid integer. Defaults to not set
      additionalBaudrates:
      - 123456
 
+=======
+>>>>>>> master
      # Commands which are known to take a long time to be acknowledged by the firmware. E.g.
      # homing, dwelling, auto leveling etc. Defaults to the below commands.
      longRunningCommands:
