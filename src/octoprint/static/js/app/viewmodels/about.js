@@ -31,6 +31,13 @@ $(function() {
                 self.aboutContent.scrollTop(0);
             });
         };
+<<<<<<< HEAD
+=======
+
+        self.showTab = function(tab) {
+            $("a[href=#" + tab + "]", self.aboutTabs).tab("show");
+        };
+>>>>>>> 1.2.11
     }
 
     OCTOPRINT_VIEWMODELS.push([

@@ -87,7 +87,17 @@ $(function() {
                 .done(function(response) {
                     new PNotify({title: gettext("Logout successful"), text: gettext("You are now logged out"), type: "success"});
                     self.fromResponse(response);
+<<<<<<< HEAD
                 });
+=======
+                },
+                error: function(error) {
+                    if (error && error.status === 401) {
+                         self.fromResponse(false);
+                    }
+                }
+            })
+>>>>>>> 1.2.11
         };
 
         self.onLoginUserKeyup = function(data, event) {

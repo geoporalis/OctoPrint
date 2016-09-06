@@ -288,7 +288,10 @@ def _process_templates():
 		tab=dict(div=lambda x: "tab_plugin_" + x, template=lambda x: x + "_tab.jinja2", to_entry=lambda data: (data["name"], data)),
 		settings=dict(div=lambda x: "settings_plugin_" + x, template=lambda x: x + "_settings.jinja2", to_entry=lambda data: (data["name"], data)),
 		usersettings=dict(div=lambda x: "usersettings_plugin_" + x, template=lambda x: x + "_usersettings.jinja2", to_entry=lambda data: (data["name"], data)),
+<<<<<<< HEAD
 		wizard=dict(div=lambda x: "wizard_plugin_" + x, template=lambda x: x + "_wizard.jinja2", to_entry=lambda data: (data["name"], data)),
+=======
+>>>>>>> 1.2.11
 		about=dict(div=lambda x: "about_plugin_" + x, template=lambda x: x + "_about.jinja2", to_entry=lambda data: (data["name"], data)),
 		generic=dict(template=lambda x: x + ".jinja2", to_entry=lambda data: data)
 	)
@@ -300,7 +303,10 @@ def _process_templates():
 		tab=dict(add="append", key="name"),
 		settings=dict(add="custom_append", key="name", custom_add_entries=lambda missing: dict(section_plugins=(gettext("Plugins"), None)), custom_add_order=lambda missing: ["section_plugins"] + missing),
 		usersettings=dict(add="append", key="name"),
+<<<<<<< HEAD
 		wizard=dict(add="append", key="name", key_extractor=lambda d, k: "0:{}".format(d[0]) if "mandatory" in d[1] and d[1]["mandatory"] else "1:{}".format(d[0])),
+=======
+>>>>>>> 1.2.11
 		about=dict(add="append", key="name"),
 		generic=dict(add="append", key=None)
 	)
@@ -409,6 +415,7 @@ def _process_templates():
 			interface=(gettext("Interface"), dict(template="dialogs/usersettings/interface.jinja2", _div="usersettings_interface", custom_bindings=False)),
 		)
 
+<<<<<<< HEAD
 	# wizard
 
 	if first_run:
@@ -434,6 +441,17 @@ def _process_templates():
 		thirdparty=(gettext("Third Party Licenses"), dict(template="dialogs/about/thirdparty.jinja2", _div="about_thirdparty", custom_bindings=False)),
 		authors=(gettext("Authors"), dict(template="dialogs/about/authors.jinja2", _div="about_authors", custom_bindings=False)),
 		changelog=(gettext("Changelog"), dict(template="dialogs/about/changelog.jinja2", _div="about_changelog", custom_bindings=False))
+=======
+	# about dialog
+
+	templates["about"]["entries"] = dict(
+		about=("About OctoPrint", dict(template="dialogs/about/about.jinja2", _div="about_about", custom_bindings=False)),
+		license=("OctoPrint License", dict(template="dialogs/about/license.jinja2", _div="about_license", custom_bindings=False)),
+		thirdparty=("Third Party Licenses", dict(template="dialogs/about/thirdparty.jinja2", _div="about_thirdparty", custom_bindings=False)),
+		authors=("Authors", dict(template="dialogs/about/authors.jinja2", _div="about_authors", custom_bindings=False)),
+		changelog=("Changelog", dict(template="dialogs/about/changelog.jinja2", _div="about_changelog", custom_bindings=False)),
+		supporters=("Supporters", dict(template="dialogs/about/supporters.jinja2", _div="about_sponsors", custom_bindings=False))
+>>>>>>> 1.2.11
 	)
 
 	# extract data from template plugins
@@ -566,7 +584,46 @@ def _process_templates():
 			templates[t]["entries"].update(template_sorting[t]["custom_insert_entries"](sorted_missing))
 			templates[t]["order"] = template_sorting[t]["custom_insert_order"](templates[t]["order"], sorted_missing)
 
+<<<<<<< HEAD
 	return templates, plugin_names, plugin_vars
+=======
+	#~~ prepare full set of template vars for rendering
+
+	now = datetime.datetime.utcnow()
+	first_run = settings().getBoolean(["server", "firstRun"]) and userManager.enabled and not userManager.hasBeenCustomized()
+	render_kwargs = dict(
+		webcamStream=settings().get(["webcam", "stream"]),
+		enableTemperatureGraph=settings().get(["feature", "temperatureGraph"]),
+		enableAccessControl=userManager.enabled,
+		enableSdSupport=settings().get(["feature", "sdSupport"]),
+		firstRun=first_run,
+		debug=debug,
+		version=VERSION,
+		display_version=DISPLAY_VERSION,
+		branch=BRANCH,
+		gcodeMobileThreshold=settings().get(["gcodeViewer", "mobileSizeThreshold"]),
+		gcodeThreshold=settings().get(["gcodeViewer", "sizeThreshold"]),
+		uiApiKey=UI_API_KEY,
+		templates=templates,
+		pluginNames=plugin_names,
+		locales=locales,
+		now=now,
+		supportedExtensions=map(lambda ext: ".{}".format(ext), get_all_extensions())
+	)
+	render_kwargs.update(plugin_vars)
+
+	#~~ render!
+
+	response = make_response(render_template(
+		"index.jinja2",
+		**render_kwargs
+	))
+
+	if first_run:
+		response = util.flask.add_non_caching_response_headers(response)
+
+	return response
+>>>>>>> 1.2.11
 
 
 def _process_template_configs(name, implementation, configs, rules):

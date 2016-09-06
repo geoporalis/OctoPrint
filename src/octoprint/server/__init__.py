@@ -112,10 +112,17 @@ def load_user(id):
 #~~ startup code
 
 
+<<<<<<< HEAD
 class Server():
 	def __init__(self, settings=None, plugin_manager=None, host="0.0.0.0", port=5000, debug=False, allow_root=False):
 		self._settings = settings
 		self._plugin_manager = plugin_manager
+=======
+class Server(object):
+	def __init__(self, configfile=None, basedir=None, host="0.0.0.0", port=5000, debug=False, allowRoot=False, logConf=None):
+		self._configfile = configfile
+		self._basedir = basedir
+>>>>>>> 1.2.11
 		self._host = host
 		self._port = port
 		self._debug = debug
@@ -646,6 +653,52 @@ class Server():
 		app.jinja_env.filters["offset_html_headers"] = offset_html_headers
 		app.jinja_env.filters["offset_markdown_headers"] = offset_markdown_headers
 
+		def regex_replace(s, find, replace):
+			return re.sub(find, replace, s)
+
+		html_header_regex = re.compile("<h(?P<number>[1-6])>(?P<content>.*?)</h(?P=number)>")
+		def offset_html_headers(s, offset):
+			def repl(match):
+				number = int(match.group("number"))
+				number += offset
+				if number > 6:
+					number = 6
+				elif number < 1:
+					number = 1
+				return "<h{number}>{content}</h{number}>".format(number=number, content=match.group("content"))
+			return html_header_regex.sub(repl, s)
+
+		markdown_header_regex = re.compile("^(?P<hashs>#+)\s+(?P<content>.*)$", flags=re.MULTILINE)
+		def offset_markdown_headers(s, offset):
+			def repl(match):
+				number = len(match.group("hashs"))
+				number += offset
+				if number > 6:
+					number = 6
+				elif number < 1:
+					number = 1
+				return "{hashs} {content}".format(hashs="#" * number, content=match.group("content"))
+			return markdown_header_regex.sub(repl, s)
+
+		html_link_regex = re.compile("<(?P<tag>a.*?)>(?P<content>.*?)</a>")
+		def externalize_links(text):
+			def repl(match):
+				tag = match.group("tag")
+				if not u"href" in tag:
+					return match.group(0)
+
+				if not u"target=" in tag and not u"rel=" in tag:
+					tag += u" target=\"_blank\" rel=\"noreferrer noopener\""
+
+				content = match.group("content")
+				return u"<{tag}>{content}</a>".format(tag=tag, content=content)
+			return html_link_regex.sub(repl, text)
+
+		app.jinja_env.filters["regex_replace"] = regex_replace
+		app.jinja_env.filters["offset_html_headers"] = offset_html_headers
+		app.jinja_env.filters["offset_markdown_headers"] = offset_markdown_headers
+		app.jinja_env.filters["externalize_links"] = externalize_links
+
 		# configure additional template folders for jinja2
 		import jinja2
 		import octoprint.util.jinja
@@ -656,9 +709,37 @@ class Server():
 		loaders = [app.jinja_loader, filesystem_loader]
 		if octoprint.util.is_running_from_source():
 			root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+<<<<<<< HEAD
 			allowed = ["AUTHORS.md", "CHANGELOG.md", "THIRDPARTYLICENSES.md"]
 			files = {"_data/" + name: os.path.join(root, name) for name in allowed}
 			loaders.append(octoprint.util.jinja.SelectedFilesLoader(files))
+=======
+			allowed = ["AUTHORS.md", "CHANGELOG.md", "SUPPORTERS.md", "THIRDPARTYLICENSES.md"]
+
+			class SourceRootFilesystemLoader(jinja2.FileSystemLoader):
+				def __init__(self, template_filter, prefix, *args, **kwargs):
+					jinja2.FileSystemLoader.__init__(self, *args, **kwargs)
+					self._filter = template_filter
+					if not prefix.endswith("/"):
+						prefix += "/"
+					self._prefix = prefix
+
+				def get_source(self, environment, template):
+					if not template.startswith(self._prefix):
+						raise jinja2.TemplateNotFound(template)
+
+					template = template[len(self._prefix):]
+					if not self._filter(template):
+						raise jinja2.TemplateNotFound(template)
+
+					return jinja2.FileSystemLoader.get_source(self, environment, template)
+
+				def list_templates(self):
+					templates = jinja2.FileSystemLoader.list_templates(self)
+					return map(lambda t: self._prefix + t, filter(self._filter, templates))
+
+			loaders.append(SourceRootFilesystemLoader(lambda t: t in allowed, "_data/", root))
+>>>>>>> 1.2.11
 
 		jinja_loader = jinja2.ChoiceLoader(loaders)
 		app.jinja_loader = jinja_loader

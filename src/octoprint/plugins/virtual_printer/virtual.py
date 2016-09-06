@@ -156,7 +156,12 @@ class VirtualPrinter(object):
 
 			# strip checksum
 			if "*" in data:
+				checksum = int(data[data.rfind("*") + 1:])
 				data = data[:data.rfind("*")]
+				if not checksum == self._calculate_checksum(data):
+					self._triggerResend(expected=self.currentLine + 1)
+					continue
+
 				self.currentLine += 1
 			elif settings().getBoolean(["devel", "virtualPrinter", "forceChecksum"]):
 				self._send("Error: Missing checksum")
@@ -376,140 +381,11 @@ class VirtualPrinter(object):
 			if len(data.strip()) > 0 and not self._okBeforeCommandOutput:
 				self._sendOk()
 
-	##~~ command implementations
-
-	def _gcode_T(self, code, data):
-		self.currentExtruder = int(code)
-		self._send("Active Extruder: %d" % self.currentExtruder)
-
-	def _gcode_F(self, code, data):
-		if self._supportF:
-			self._send("echo:changed F value")
-			return False
-		else:
-			self._send("Error: Unknown command F")
-			return True
-
-	def _gcode_M104(self, data):
-		self._parseHotendCommand(data)
-	_gcode_M109 = _gcode_M104
-
-	def _gcode_M140(self, data):
-		self._parseBedCommand(data)
-	_gcode_M190 = _gcode_M140
-
-	def _gcode_M105(self, data):
-		self._processTemperatureQuery()
-		return True
-
-	def _gcode_M20(self, data):
-		if self._sdCardReady:
-			self._listSd()
-
-	def _gcode_M21(self, data):
-		self._sdCardReady = True
-		self._send("SD card ok")
-
-	def _gcode_M22(self, data):
-		self._sdCardReady = False
-
-	def _gcode_M23(self, data):
-		if self._sdCardReady:
-			filename = data.split(None, 1)[1].strip()
-			self._selectSdFile(filename)
-
-	def _gcode_M24(self, data):
-		if self._sdCardReady:
-			self._startSdPrint()
-
-	def _gcode_M25(self, data):
-		if self._sdCardReady:
-			self._pauseSdPrint()
-
-	def _gcode_M26(self, data):
-		if self._sdCardReady:
-			pos = int(re.search("S([0-9]+)", data).group(1))
-			self._setSdPos(pos)
-
-	def _gcode_M27(self, data):
-		if self._sdCardReady:
-			self._reportSdStatus()
-
-	def _gcode_M28(self, data):
-		if self._sdCardReady:
-			filename = data.split(None, 1)[1].strip()
-			self._writeSdFile(filename)
-
-	def _gcode_M29(self, data):
-		if self._sdCardReady:
-			self._finishSdFile()
-
-	def _gcode_M30(self, data):
-		if self._sdCardReady:
-			filename = data.split(None, 1)[1].strip()
-			self._deleteSdFile(filename)
-
-	def _gcode_M114(self, data):
-		output = "C: X:{} Y:{} Z:{} E:{}".format(self._lastX, self._lastY, self._lastZ, self._lastE)
-		if not self._okBeforeCommandOutput:
-			output = "ok " + output
-		self._send(output)
-		return True
-
-	def _gcode_M117(self, data):
-		# we'll just use this to echo a message, to allow playing around with pause triggers
-		if self._echoOnM117:
-			self._send("echo:%s" % re.search("M117\s+(.*)", data).group(1))
-
-	def _gcode_M400(self, data):
-		self.buffered.join()
-
-	def _gcode_M999(self, data):
-		# mirror Marlin behaviour
-		self._send("Resend: 1")
-
-	def _gcode_G20(self, data):
-		self._unitModifier = 1.0 / 2.54
-		if self._lastX is not None:
-			self._lastX *= 2.54
-		if self._lastY is not None:
-			self._lastY *= 2.54
-		if self._lastZ is not None:
-			self._lastZ *= 2.54
-		if self._lastE is not None:
-			self._lastE *= 2.54
-
-	def _gcode_G21(self, data):
-		self._unitModifier = 1.0
-		if self._lastX is not None:
-			self._lastX /= 2.54
-		if self._lastY is not None:
-			self._lastY /= 2.54
-		if self._lastZ is not None:
-			self._lastZ /= 2.54
-		if self._lastE is not None:
-			self._lastE /= 2.54
-
-	def _gcode_G90(self, data):
-		self._relative = False
-
-	def _gcode_G91(self, data):
-		self._relative = True
-
-	def _gcode_G92(self, data):
-		self._setPosition(data)
-
-	def _gcode_G28(self, data):
-		self._performMove(data)
-
-	def _gcode_G0(self, data):
-		# simulate reprap buffered commands via a Queue with maxsize which internally simulates the moves
-		self.buffered.put(data)
-	_gcode_G1 = _gcode_G0
-	_gcode_G2 = _gcode_G0
-	_gcode_G3 = _gcode_G0
-
-	##~~ further helpers
+	def _calculate_checksum(self, line):
+		checksum = 0
+		for c in line:
+			checksum ^= ord(c)
+		return checksum
 
 	def _kill(self):
 		if not self._supportM112:

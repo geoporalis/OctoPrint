@@ -916,7 +916,10 @@ def collect_plugin_assets(enable_gcodeviewer=True, preferred_stylesheet="css"):
 		'js/app/viewmodels/users.js',
 		'js/app/viewmodels/log.js',
 		'js/app/viewmodels/usersettings.js',
+<<<<<<< HEAD
 		'js/app/viewmodels/wizard.js',
+=======
+>>>>>>> 1.2.11
 		'js/app/viewmodels/about.js'
 	]
 	if enable_gcodeviewer:

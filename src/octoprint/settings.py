@@ -95,7 +95,8 @@ default_settings = {
 		"helloCommand": "M110 N0",
 		"disconnectOnErrors": True,
 		"ignoreErrorsFromFirmware": False,
-		"logResends": False,
+		"logResends": True,
+		"supportResendsWithoutOk": False,
 
 		# command specific flags
 		"triggerOkForM29": True
@@ -216,17 +217,21 @@ default_settings = {
 		"defaultLanguage": "_default",
 		"components": {
 			"order": {
-				"navbar": ["settings", "systemmenu", "login"],
+				"navbar": ["settings", "systemmenu", "login", "plugin_announcements"],
 				"sidebar": ["connection", "state", "files"],
 				"tab": ["temperature", "control", "gcodeviewer", "terminal", "timelapse"],
 				"settings": [
 					"section_printer", "serial", "printerprofiles", "temperatures", "terminalfilters", "gcodescripts",
 					"section_features", "features", "webcam", "accesscontrol", "api",
-					"section_octoprint", "server", "folders", "appearance", "logs", "plugin_pluginmanager", "plugin_softwareupdate"
+					"section_octoprint", "server", "folders", "appearance", "logs", "plugin_pluginmanager", "plugin_softwareupdate", "plugin_announcements"
 				],
 				"usersettings": ["access", "interface"],
+<<<<<<< HEAD
 				"wizard": ["access"],
 				"about": ["about", "license", "thirdparty", "plugin_pluginmanager", "authors", "changelog"],
+=======
+				"about": ["about", "supporters", "authors", "changelog", "license", "thirdparty", "plugin_pluginmanager"],
+>>>>>>> 1.2.11
 				"generic": []
 			},
 			"disabled": {
