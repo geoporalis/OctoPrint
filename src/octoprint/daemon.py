@@ -14,6 +14,7 @@ class Daemon:
 
 	Usage: subclass the daemon class and override the run() method.
 
+<<<<<<< HEAD
 	If you want to log the output to someplace different that stdout and stderr,
 	also override the echo() and error() methods.
 	"""
@@ -35,13 +36,24 @@ class Daemon:
 		signal.signal(signal.SIGTERM, self._on_sigterm)
 
 	def _double_fork(self):
+=======
+	def __init__(self, pidfile): self.pidfile = pidfile
+
+	def daemonize(self):
+		"""Deamonize class. UNIX double fork mechanism."""
+
+>>>>>>> master
 		try:
 			pid = os.fork()
 			if pid > 0:
 				# exit first parent
 				sys.exit(0)
 		except OSError as err:
+<<<<<<< HEAD
 			self.error("First fork failed: {}".format(str(err)))
+=======
+			sys.stderr.write('fork #1 failed: {0}\n'.format(err))
+>>>>>>> master
 			sys.exit(1)
 
 		# decouple from parent environment
@@ -56,10 +68,16 @@ class Daemon:
 				# exit from second parent
 				sys.exit(0)
 		except OSError as err:
+<<<<<<< HEAD
 			self.error("Second fork failed: {}".format(str(err)))
 			sys.exit(1)
 
 	def _redirect_io(self):
+=======
+			sys.stderr.write('fork #2 failed: {0}\n'.format(err))
+			sys.exit(1)
+
+>>>>>>> master
 		# redirect standard file descriptors
 		sys.stdout.flush()
 		sys.stderr.flush()
@@ -71,37 +89,74 @@ class Daemon:
 		os.dup2(so.fileno(), sys.stdout.fileno())
 		os.dup2(se.fileno(), sys.stderr.fileno())
 
+<<<<<<< HEAD
 	def _on_sigterm(self, _signo, _stack_frame):
 		"""Signal handler for SIGTERM, deletes the pidfile."""
 		self.remove_pidfile()
 		sys.exit(0)
+=======
+		# write pidfile
+		pid = str(os.getpid())
+		with open(self.pidfile,'w+') as f:
+			f.write(pid + '\n')
+
+	def terminated(self):
+		self.remove_pidfile()
+>>>>>>> master
 
 	def start(self):
 		"""Start the daemon."""
 
 		# Check for a pidfile to see if the daemon already runs
+<<<<<<< HEAD
 		pid = self.get_pid()
+=======
+		try:
+			with open(self.pidfile,'r') as pf:
+
+				pid = int(pf.read().strip())
+		except IOError:
+			pid = None
+
+>>>>>>> master
 		if pid:
 			self.error("pidfile {} already exist. Is the daemon already running?".format(self.pidfile))
 			sys.exit(1)
 
+<<<<<<< HEAD
 		self.echo("Starting daemon...")
 
+=======
+>>>>>>> master
 		# Start the daemon
 		self._daemonize()
 		self.run()
 
 	def stop(self, check_running=True):
 		"""Stop the daemon."""
+<<<<<<< HEAD
 		pid = self.get_pid()
+=======
+
+		# Get the pid from the pidfile
+		try:
+			with open(self.pidfile,'r') as pf:
+				pid = int(pf.read().strip())
+		except IOError:
+			pid = None
+
+>>>>>>> master
 		if not pid:
 			if not check_running:
 				return
 			self.error("pidfile {} does not exist. Is the daemon really running?".format(self.pidfile))
 			sys.exit(1)
 
+<<<<<<< HEAD
 		self.echo("Stopping daemon...")
 
+=======
+>>>>>>> master
 		# Try killing the daemon process
 		try:
 			while 1:
@@ -169,6 +224,7 @@ class Daemon:
 		It will be called after the process has been daemonized by
 		start() or restart()."""
 
+<<<<<<< HEAD
 		raise NotImplementedError()
 
 	@classmethod
@@ -178,3 +234,9 @@ class Daemon:
 	@classmethod
 	def error(cls, line):
 		print(line, stream=sys.stderr)
+=======
+	def remove_pidfile(self):
+		"""Removes the pidfile."""
+		if os.path.isfile(self.pidfile):
+			os.remove(self.pidfile)
+>>>>>>> master

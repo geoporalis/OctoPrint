@@ -12,6 +12,9 @@ import time
 
 import octoprint.timelapse
 import octoprint.server
+import octoprint.events
+import octoprint.plugin
+
 from octoprint.events import Events
 from octoprint.settings import settings
 
@@ -43,6 +46,8 @@ class PrinterStateConnection(sockjs.tornado.SockJSConnection, octoprint.printer.
 		self._throttleFactor = 1
 		self._lastCurrent = 0
 		self._baseRateLimit = 0.5
+
+		self._emit_mutex = threading.RLock()
 
 	def _getRemoteAddress(self, info):
 		forwardedFor = info.headers.get("X-Forwarded-For")
@@ -198,7 +203,8 @@ class PrinterStateConnection(sockjs.tornado.SockJSConnection, octoprint.printer.
 		self.sendEvent(event, payload)
 
 	def _emit(self, type, payload):
-		try:
-			self.send({type: payload})
-		except Exception as e:
-			self._logger.warn("Could not send message to client %s: %s" % (self._remoteAddress, str(e)))
+		with self._emit_mutex:
+			try:
+				self.send({type: payload})
+			except Exception as e:
+				self._logger.warn("Could not send message to client %s: %s" % (self._remoteAddress, str(e)))

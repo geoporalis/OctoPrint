@@ -34,6 +34,19 @@ _valid_id_re = re.compile("[a-z_]+")
 _valid_div_re = re.compile("[a-zA-Z_-]+")
 
 @app.route("/")
+<<<<<<< HEAD
+=======
+@util.flask.preemptively_cached(cache=preemptiveCache,
+                                data=lambda: dict(path=request.path, base_url=request.url_root, query_string="l10n={}".format(g.locale.language) if g.locale else "en"),
+                                unless=lambda: request.url_root in settings().get(["server", "preemptiveCache", "exceptions"]) or not (request.url_root.startswith("http://") or request.url_root.startswith("https://")))
+@util.flask.conditional(lambda: _check_etag_and_lastmodified_for_index(), NOT_MODIFIED)
+@util.flask.cached(timeout=-1,
+                   refreshif=lambda cached: _validate_cache_for_index(cached),
+                   key=lambda: "view:{}:{}".format(request.base_url, g.locale.language if g.locale else "en"),
+                   unless_response=lambda response: util.flask.cache_check_response_headers(response))
+@util.flask.etagged(lambda _: _compute_etag_for_index())
+@util.flask.lastmodified(lambda _: _compute_date_for_index())
+>>>>>>> master
 def index():
 	global _templates, _plugin_names, _plugin_vars
 
@@ -363,7 +376,7 @@ def _process_templates():
 	# sidebar
 
 	templates["sidebar"]["entries"]= dict(
-		connection=(gettext("Connection"), dict(template="sidebar/connection.jinja2", _div="connection", icon="signal", styles_wrapper=["display: none"], data_bind="visible: loginState.isAdmin")),
+		connection=(gettext("Connection"), dict(template="sidebar/connection.jinja2", _div="connection", icon="signal", styles_wrapper=["display: none"], data_bind="visible: loginState.isUser")),
 		state=(gettext("State"), dict(template="sidebar/state.jinja2", _div="state", icon="info-sign")),
 		files=(gettext("Files"), dict(template="sidebar/files.jinja2", _div="files", icon="list", classes_content=["overflow_visible"], template_header="sidebar/files_header.jinja2"))
 	)
@@ -769,7 +782,7 @@ def _compute_date_for_i18n(locale, domain):
 
 def _compute_date(files):
 	from datetime import datetime
-	timestamps = map(lambda path: os.stat(path).st_mtime, files)
+	timestamps = map(lambda path: os.stat(path).st_mtime, files) + [0] if files else []
 	max_timestamp = max(*timestamps) if timestamps else None
 	if max_timestamp:
 		# we set the micros to 0 since microseconds are not speced for HTTP

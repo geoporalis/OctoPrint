@@ -278,11 +278,29 @@ def uploadGcodeFile(target):
 			the case after they have finished streaming to the printer, which is why this callback is also used
 			for the corresponding call to addSdFile.
 
+<<<<<<< HEAD
 			Selects the just uploaded file if either selectAfterUpload or printAfterSelect are True, or if the
 			exact file is already selected, such reloading it.
 			"""
 			if octoprint.filemanager.valid_file_type(added_file, "gcode") and (selectAfterUpload or printAfterSelect or (currentFilename == filename and currentOrigin == destination)):
 				printer.select_file(absFilename, destination == FileDestinations.SDCARD, printAfterSelect)
+=======
+		Selects the just uploaded file if either selectAfterUpload or printAfterSelect are True, or if the
+		exact file is already selected, such reloading it.
+		"""
+		if octoprint.filemanager.valid_file_type(added_file, "gcode") and (selectAfterUpload or printAfterSelect or (currentFilename == filename and currentOrigin == destination)):
+			printer.select_file(absFilename, destination == FileDestinations.SDCARD, printAfterSelect)
+
+	added_file = fileManager.add_file(FileDestinations.LOCAL, upload.filename, upload, allow_overwrite=True)
+	if added_file is None:
+		return make_response("Could not upload the file %s" % upload.filename, 500)
+	if octoprint.filemanager.valid_file_type(added_file, "stl"):
+		filename = added_file
+		done = True
+	else:
+		filename = fileProcessingFinished(added_file, fileManager.path_on_disk(FileDestinations.LOCAL, added_file), target)
+		done = not sd
+>>>>>>> master
 
 		# FileDestinations.LOCAL = should normally be target, but can't because SDCard handling isn't implemented yet
 		futureFullPath = fileManager.join_path(FileDestinations.LOCAL, futurePath, futureFilename)
@@ -438,20 +456,23 @@ def gcodeFileCommand(filename, target):
 		except octoprint.slicing.UnknownSlicer as e:
 			return make_response("Slicer {slicer} is not available".format(slicer=e.slicer), 400)
 
-		if not octoprint.filemanager.valid_file_type(filename, type="stl"):
-			return make_response("Cannot slice {filename}, not an STL file".format(**locals()), 415)
+		if not any([octoprint.filemanager.valid_file_type(filename, type=source_file_type) for source_file_type in slicer_instance.get_slicer_properties().get("source_file_types", ["model"])]):
+			return make_response("Cannot slice {filename}, not a model file".format(**locals()), 415)
 
-		if slicer_instance.get_slicer_properties()["same_device"] and (printer.is_printing() or printer.is_paused()):
+		if slicer_instance.get_slicer_properties().get("same_device", True) and (printer.is_printing() or printer.is_paused()):
 			# slicer runs on same device as OctoPrint, slicing while printing is hence disabled
 			return make_response("Cannot slice on {slicer} while printing due to performance reasons".format(**locals()), 409)
 
-		if "gcode" in data and data["gcode"]:
-			gcode_name = data["gcode"]
+		if "destination" in data and data["destination"]:
+			destination = data["destination"]
+			del data["destination"]
+		elif "gcode" in data and data["gcode"]:
+			destination = data["gcode"]
 			del data["gcode"]
 		else:
 			import os
 			name, _ = os.path.splitext(filename)
-			gcode_name = name + ".gco"
+			destination = name + "." + slicer_instance.get_slicer_properties().get("destination_extensions", ["gco", "gcode", "g"])[0]
 
 		if "path" in data and data["path"]:
 			gcode_name = fileManager.join_path(target, data["path"], gcode_name)
@@ -462,8 +483,8 @@ def gcodeFileCommand(filename, target):
 
 		# prohibit overwriting the file that is currently being printed
 		currentOrigin, currentFilename = _getCurrentFile()
-		if currentFilename == gcode_name and currentOrigin == target and (printer.is_printing() or printer.is_paused()):
-			make_response("Trying to slice into file that is currently being printed: %s" % gcode_name, 409)
+		if currentFilename == destination and currentOrigin == target and (printer.is_printing() or printer.is_paused()):
+			make_response("Trying to slice into file that is currently being printed: %s" % destination, 409)
 
 		if "profile" in data.keys() and data["profile"]:
 			profile = data["profile"]
@@ -511,24 +532,24 @@ def gcodeFileCommand(filename, target):
 				printer.select_file(filenameToSelect, sd, print_after_slicing)
 
 		try:
-			fileManager.slice(slicer, target, filename, target, gcode_name,
+			fileManager.slice(slicer, target, filename, target, destination,
 			                  profile=profile,
 			                  printer_profile_id=printerProfile,
 			                  position=position,
 			                  overrides=overrides,
 			                  callback=slicing_done,
-			                  callback_args=(target, gcode_name, select_after_slicing, print_after_slicing))
+			                  callback_args=(target, destination, select_after_slicing, print_after_slicing))
 		except octoprint.slicing.UnknownProfile:
 			return make_response("Profile {profile} doesn't exist".format(**locals()), 400)
 
 		files = {}
-		location = url_for(".readGcodeFile", target=target, filename=gcode_name, _external=True)
+		location = url_for(".readGcodeFile", target=target, filename=destination, _external=True)
 		result = {
-			"name": gcode_name,
+			"name": destination,
 			"origin": FileDestinations.LOCAL,
 			"refs": {
 				"resource": location,
-				"download": url_for("index", _external=True) + "downloads/files/" + target + "/" + gcode_name
+				"download": url_for("index", _external=True) + "downloads/files/" + target + "/" + destination
 			}
 		}
 

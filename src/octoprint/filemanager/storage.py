@@ -486,7 +486,11 @@ class LocalFileStorage(StorageInterface):
 		folder_path = os.path.join(path, name)
 		if os.path.exists(folder_path):
 			if not ignore_existing:
+<<<<<<< HEAD
 				raise StorageError("{sanitized_foldername} does already exist in {virtual_path}".format(**locals()), code=StorageError.ALREADY_EXISTS)
+=======
+				raise RuntimeError("{name} does already exist in {path}".format(**locals()))
+>>>>>>> master
 		else:
 			os.mkdir(folder_path)
 
@@ -503,7 +507,11 @@ class LocalFileStorage(StorageInterface):
 		if ".metadata.yaml" in contents:
 			contents.remove(".metadata.yaml")
 		if contents and not recursive:
+<<<<<<< HEAD
 			raise StorageError("{sanitized_foldername} in {virtual_path} is not empty".format(**locals()), code=StorageError.NOT_EMPTY)
+=======
+			raise RuntimeError("{name} in {path} is not empty".format(**locals()))
+>>>>>>> master
 
 		import shutil
 		shutil.rmtree(folder_path)

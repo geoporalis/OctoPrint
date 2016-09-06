@@ -11,8 +11,31 @@ function DataUpdater(allViewModels) {
     self._lastProcessingTimes = [];
     self._lastProcessingTimesSize = 20;
 
-    self._timelapse_popup = undefined;
+    self._connectCallback = undefined;
 
+<<<<<<< HEAD
+=======
+    self.connect = function(callback) {
+        var options = {};
+        if (SOCKJS_DEBUG) {
+            options["debug"] = true;
+        }
+
+        self._connectCallback = callback;
+
+        self._socket = new SockJS(SOCKJS_URI, undefined, options);
+        self._socket.onopen = self._onconnect;
+        self._socket.onclose = self._onclose;
+        self._socket.onmessage = self._onmessage;
+    };
+
+    self.reconnect = function() {
+        self._socket.close();
+        delete self._socket;
+        self.connect();
+    };
+
+>>>>>>> master
     self.increaseThrottle = function() {
         self.setThrottle(self._throttleFactor + 1);
     };
@@ -119,6 +142,7 @@ function DataUpdater(allViewModels) {
             callViewModels(self.allViewModels, "onServerConnect");
         }
 
+<<<<<<< HEAD
         // if the version, the plugin hash or the config hash changed, we
         // want the user to reload the UI since it might be stale now
         var versionChanged = oldVersion != VERSION;
@@ -136,10 +160,96 @@ function DataUpdater(allViewModels) {
     self._onCurrentData = function(event) {
         callViewModels(self.allViewModels, "fromCurrentData", [event.data]);
     };
+=======
+            var data = e.data[prop];
+
+            var start = new Date().getTime();
+            switch (prop) {
+                case "connected": {
+                    // update the current UI API key and send it with any request
+                    UI_API_KEY = data["apikey"];
+                    $.ajaxSetup({
+                        headers: {"X-Api-Key": UI_API_KEY}
+                    });
+
+                    var oldVersion = VERSION;
+                    VERSION = data["version"];
+                    DISPLAY_VERSION = data["display_version"];
+                    BRANCH = data["branch"];
+                    $("span.version").text(DISPLAY_VERSION);
+
+                    var oldPluginHash = self._pluginHash;
+                    self._pluginHash = data["plugin_hash"];
+
+                    if ($("#offline_overlay").is(":visible")) {
+                        hideOfflineOverlay();
+                        _.each(self.allViewModels, function(viewModel) {
+                            if (viewModel.hasOwnProperty("onServerReconnect")) {
+                                viewModel.onServerReconnect();
+                            } else if (viewModel.hasOwnProperty("onDataUpdaterReconnect")) {
+                                viewModel.onDataUpdaterReconnect();
+                            }
+                        });
+
+                        if ($('#tabs li[class="active"] a').attr("href") == "#control") {
+                            $("#webcam_image").attr("src", CONFIG_WEBCAM_STREAM + "?" + new Date().getTime());
+                        }
+                    } else {
+                        _.each(self.allViewModels, function(viewModel) {
+                            if (viewModel.hasOwnProperty("onServerConnect")) {
+                                viewModel.onServerConnect();
+                            }
+                        });
+                    }
+
+                    if (oldVersion != VERSION || (oldPluginHash != undefined && oldPluginHash != self._pluginHash)) {
+                        showReloadOverlay();
+                    }
+
+                    self.setThrottle(1);
+
+                    log.info("Connected to the server");
+
+                    if (self._connectCallback) {
+                        self._connectCallback();
+                        self._connectCallback = undefined;
+                    }
+
+                    break;
+                }
+                case "history": {
+                    _.each(self.allViewModels, function(viewModel) {
+                        if (viewModel.hasOwnProperty("fromHistoryData")) {
+                            viewModel.fromHistoryData(data);
+                        }
+                    });
+                    break;
+                }
+                case "current": {
+                    _.each(self.allViewModels, function(viewModel) {
+                        if (viewModel.hasOwnProperty("fromCurrentData")) {
+                            viewModel.fromCurrentData(data);
+                        }
+                    });
+                    break;
+                }
+                case "slicingProgress": {
+                    _.each(self.allViewModels, function(viewModel) {
+                        if (viewModel.hasOwnProperty("onSlicingProgress")) {
+                            viewModel.onSlicingProgress(data["slicer"], data["model_path"], data["machinecode_path"], data["progress"]);
+                        }
+                    });
+                    break;
+                }
+                case "event": {
+                    var type = data["type"];
+                    var payload = data["payload"];
+>>>>>>> master
 
     self._onSlicingProgress = function(event) {
         $("#gcode_upload_progress").find(".bar").text(_.sprintf(gettext("Slicing ... (%(percentage)d%%)"), {percentage: Math.round(event.data["progress"])}));
 
+<<<<<<< HEAD
         var data = event.data;
         callViewModels(self.allViewModels, "onSlicingProgress", [
             data["slicer"],
@@ -212,6 +322,9 @@ function DataUpdater(allViewModels) {
                             type: "success"
                         });
                     } else if (type == "PrintCancelled") {
+=======
+                    if (type == "PrintCancelled") {
+>>>>>>> master
                         if (payload.firmwareError) {
                             new PNotify({
                                 title: gettext("Unhandled communication error"),
@@ -223,7 +336,7 @@ function DataUpdater(allViewModels) {
                     } else if (type == "Error") {
                         new PNotify({
                                 title: gettext("Unhandled communication error"),
-                                text: _.sprintf(gettext("The was an unhandled error while talking to the printer. Due to that OctoPrint disconnected. Error: %(error)s"), payload),
+                                text: _.sprintf(gettext("There was an unhandled error while talking to the printer. Due to that OctoPrint disconnected. Error: %(error)s"), payload),
                                 type: "error",
                                 hide: false
                         });
@@ -399,6 +512,7 @@ function DataUpdater(allViewModels) {
     self._onTimelapse = function(event) {
         callViewModels(self.allViewModels, "fromTimelapseData", [event.data]);
     };
+<<<<<<< HEAD
 
     self._onPluginMessage = function(event) {
         callViewModels(self.allViewModels, "onDataUpdaterPluginMessage", [event.data.plugin, event.data.data]);
@@ -428,4 +542,6 @@ function DataUpdater(allViewModels) {
         .onMessage("plugin", self._onPluginMessage);
 
     self.connect();
+=======
+>>>>>>> master
 }

@@ -119,6 +119,7 @@ $(function() {
         self.feature_waitForStart = ko.observable(undefined);
         self.feature_sendChecksum = ko.observable("print");
         self.feature_sdSupport = ko.observable(undefined);
+        self.feature_sdRelativePath = ko.observable(undefined);
         self.feature_sdAlwaysAvailable = ko.observable(undefined);
         self.feature_swallowOkAfterResend = ko.observable(undefined);
         self.feature_repetierTargetTemp = ko.observable(undefined);
@@ -148,6 +149,9 @@ $(function() {
         self.serial_disconnectOnErrors = ko.observable(undefined);
         self.serial_triggerOkForM29 = ko.observable(undefined);
         self.serial_supportResendsWithoutOk = ko.observable(undefined);
+        self.serial_maxTimeoutsIdle = ko.observable(undefined);
+        self.serial_maxTimeoutsPrinting = ko.observable(undefined);
+        self.serial_maxTimeoutsLong = ko.observable(undefined);
 
         self.folder_uploads = ko.observable(undefined);
         self.folder_timelapse = ko.observable(undefined);
@@ -747,6 +751,9 @@ $(function() {
             self.serial_disconnectOnErrors(response.serial.disconnectOnErrors);
             self.serial_triggerOkForM29(response.serial.triggerOkForM29);
             self.serial_supportResendsWithoutOk(response.serial.supportResendsWithoutOk);
+            self.serial_maxTimeoutsIdle(response.serial.maxTimeoutsIdle);
+            self.serial_maxTimeoutsPrinting(response.serial.maxTimeoutsPrinting);
+            self.serial_maxTimeoutsLong(response.serial.maxTimeoutsLong);
 
             self.folder_uploads(response.folder.uploads);
             self.folder_timelapse(response.folder.timelapse);
@@ -852,7 +859,10 @@ $(function() {
                         "ignoreErrorsFromFirmware": self.serial_ignoreErrorsFromFirmware(),
                         "disconnectOnErrors": self.serial_disconnectOnErrors(),
                         "triggerOkForM29": self.serial_triggerOkForM29(),
-                        "supportResendsWithoutOk": self.serial_supportResendsWithoutOk()
+                        "supportResendsWithoutOk": self.serial_supportResendsWithoutOk(),
+                        "maxTimeoutsIdle": self.serial_maxTimeoutsIdle(),
+                        "maxTimeoutsPrinting": self.serial_maxTimeoutsPrinting(),
+                        "maxTimeoutsLong": self.serial_maxTimeoutsLong()
                     },
                     "folder": {
                         "uploads": self.folder_uploads(),

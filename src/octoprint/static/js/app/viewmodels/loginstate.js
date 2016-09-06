@@ -116,6 +116,7 @@ $(function() {
             self.allViewModels = allViewModels;
         };
 
+<<<<<<< HEAD
         self.onDataUpdaterReconnect = function() {
             self.requestData();
         };
@@ -133,6 +134,10 @@ $(function() {
         };
 
         self.onStartupComplete = function() {
+=======
+        self.onStartupComplete = self.onServerConnect = self.onServerReconnect = function() {
+            if (self.allViewModels == undefined) return;
+>>>>>>> master
             self.requestData();
         };
     }

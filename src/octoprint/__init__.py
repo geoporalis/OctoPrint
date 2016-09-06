@@ -175,7 +175,20 @@ def init_logging(settings, use_logging_file=True, logging_file=None, default_con
 	# make sure we log any warnings
 	logging.captureWarnings(True)
 
+<<<<<<< HEAD
 	import warnings
+=======
+	def run(self):
+		octoprint = Server(configfile=self._configfile,
+		                   basedir=self._basedir,
+		                   host=self._host,
+		                   port=self._port,
+		                   debug=self._debug,
+		                   allowRoot=self._allowRoot,
+		                   logConf=self._logConf,
+		                   octoprint_daemon=self)
+		octoprint.run()
+>>>>>>> master
 
 	categories = (DeprecationWarning, PendingDeprecationWarning)
 	if verbosity > 2:
@@ -188,6 +201,7 @@ def init_logging(settings, use_logging_file=True, logging_file=None, default_con
 	if uncaught_logger is None:
 		logger = logging.getLogger(__name__)
 	else:
+<<<<<<< HEAD
 		logger = logging.getLogger(uncaught_logger)
 
 	if uncaught_handler is None:
@@ -210,6 +224,16 @@ def main():
 	from octoprint.cli import octo
 	octo(prog_name="octoprint", auto_envvar_prefix="OCTOPRINT")
 
+=======
+		octoprint = Server(configfile=args.config,
+		                   basedir=args.basedir,
+		                   host=args.host,
+		                   port=args.port,
+		                   debug=args.debug,
+		                   allowRoot=args.allowRoot,
+		                   logConf=args.logConf)
+		octoprint.run()
+>>>>>>> master
 
 if __name__ == "__main__":
 	main()

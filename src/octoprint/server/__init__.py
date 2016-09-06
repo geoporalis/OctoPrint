@@ -12,7 +12,6 @@ from flask.ext.login import LoginManager, current_user
 from flask.ext.principal import Principal, Permission, RoleNeed, identity_loaded, UserNeed
 from flask.ext.babel import Babel, gettext, ngettext
 from flask.ext.assets import Environment, Bundle
-from flaskext.markdown import Markdown
 from babel import Locale
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -119,7 +118,7 @@ class Server():
 		self._plugin_manager = plugin_manager
 =======
 class Server(object):
-	def __init__(self, configfile=None, basedir=None, host="0.0.0.0", port=5000, debug=False, allowRoot=False, logConf=None):
+	def __init__(self, configfile=None, basedir=None, host="0.0.0.0", port=5000, debug=False, allowRoot=False, logConf=None, octoprint_daemon=None):
 		self._configfile = configfile
 		self._basedir = basedir
 >>>>>>> 1.2.11
@@ -128,6 +127,7 @@ class Server(object):
 		self._debug = debug
 		self._allow_root = allow_root
 		self._server = None
+		self._octoprint_daemon = octoprint_daemon
 
 		self._logger = None
 
@@ -525,8 +525,17 @@ class Server(object):
 			observer.stop()
 			observer.join()
 			octoprint.plugin.call_plugin(octoprint.plugin.ShutdownPlugin,
+<<<<<<< HEAD
 			                             "on_shutdown",
 			                             sorting_context="ShutdownPlugin.on_shutdown")
+=======
+			                             "on_shutdown")
+
+			if self._octoprint_daemon is not None:
+				self._logger.info("Cleaning up daemon pidfile")
+				self._octoprint_daemon.terminated()
+
+>>>>>>> master
 			self._logger.info("Goodbye!")
 		atexit.register(on_shutdown)
 
@@ -588,7 +597,8 @@ class Server(object):
 			response.headers.add("X-Clacks-Overhead", "GNU Terry Pratchett")
 			return response
 
-		Markdown(app)
+		from octoprint.util.jinja import MarkdownFilter
+		MarkdownFilter(app)
 
 	def _setup_i18n(self, app):
 		global babel
@@ -621,6 +631,7 @@ class Server(object):
 
 		app.jinja_env.add_extension("jinja2.ext.do")
 		app.jinja_env.add_extension("octoprint.util.jinja.trycatch")
+<<<<<<< HEAD
 
 		def regex_replace(s, find, replace):
 			return re.sub(find, replace, s)
@@ -652,6 +663,8 @@ class Server(object):
 		app.jinja_env.filters["regex_replace"] = regex_replace
 		app.jinja_env.filters["offset_html_headers"] = offset_html_headers
 		app.jinja_env.filters["offset_markdown_headers"] = offset_markdown_headers
+=======
+>>>>>>> master
 
 		def regex_replace(s, find, replace):
 			return re.sub(find, replace, s)
@@ -755,10 +768,25 @@ class Server(object):
 		preemptive_cache_timeout = settings().getInt(["server", "preemptiveCache", "until"])
 		cutoff_timestamp = time.time() - preemptive_cache_timeout * 24 * 60 * 60
 
-		def filter_old_entries(entry):
+		def filter_current_entries(entry):
+			"""Returns True for entries younger than the cutoff date"""
 			return "_timestamp" in entry and entry["_timestamp"] > cutoff_timestamp
 
-		cache_data = preemptive_cache.clean_all_data(lambda root, entries: filter(filter_old_entries, entries))
+		def filter_http_entries(entry):
+			"""Returns True for entries targeting http or https."""
+			return "base_url" in entry \
+			       and entry["base_url"] \
+			       and (entry["base_url"].startswith("http://")
+			            or entry["base_url"].startswith("https://"))
+
+		def filter_entries(entry):
+			"""Combined filter."""
+			filters = (filter_current_entries,
+			           filter_http_entries)
+			return all([f(entry) for f in filters])
+
+		# filter out all old and non-http entries
+		cache_data = preemptive_cache.clean_all_data(lambda root, entries: filter(filter_entries, entries))
 		if not cache_data:
 			return
 
@@ -770,6 +798,7 @@ class Server(object):
 					additional_request_data = kwargs.get("_additional_request_data", dict())
 					kwargs = dict((k, v) for k, v in kwargs.items() if not k.startswith("_") and not k == "plugin")
 					kwargs.update(additional_request_data)
+
 					try:
 						if plugin:
 							self._logger.info("Preemptively caching {} (plugin {}) for {!r}".format(route, plugin, kwargs))
@@ -781,6 +810,7 @@ class Server(object):
 					except:
 						self._logger.exception("Error while trying to preemptively cache {} for {!r}".format(route, kwargs))
 
+		# asynchronous caching
 		import threading
 		cache_thread = threading.Thread(target=execute_caching, name="Preemptive Cache Worker")
 		cache_thread.daemon = True
