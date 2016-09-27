@@ -114,12 +114,16 @@ default_settings = {
 		"seenWizards": {},
 		"secretKey": None,
 		"reverseProxy": {
-			"prefixHeader": "X-Script-Name",
-			"schemeHeader": "X-Scheme",
-			"hostHeader": "X-Forwarded-Host",
-			"prefixFallback": "",
-			"schemeFallback": "",
-			"hostFallback": ""
+			"prefixHeader": None,
+			"schemeHeader": None,
+			"hostHeader": None,
+			"serverHeader": None,
+			"portHeader": None,
+			"prefixFallback": None,
+			"schemeFallback": None,
+			"hostFallback": None,
+			"serverFallback": None,
+			"portFallback": None
 		},
 		"uploads": {
 			"maxSize":  1 * 1024 * 1024 * 1024, # 1GB
@@ -905,9 +909,9 @@ class Settings(object):
 
 		while len(path) > 1:
 			key = path.pop(0)
-			if key in config and key in defaults:
+			if key in config:
 				config = config[key]
-				defaults = defaults[key]
+				defaults = defaults.get(key, dict())
 			elif incl_defaults and key in defaults:
 				config = {}
 				defaults = defaults[key]
